@@ -1,5 +1,5 @@
 from datetime import datetime
-from helpers import yymmdd
+from helpers import convert_to_yymmdd
 import requests
 import os
 import zipfile
@@ -22,24 +22,21 @@ def try_http_download(url:str):
         pass
 
 def run():
-    dt = yymmdd(datetime.now())
+    dt = convert_to_yymmdd(datetime.now())
     url_to_download = build_url_download(dt)
 
-    #1) Download do .ZIP
     zip_bytes, zip_name = try_http_download(url_to_download)
     if not zip_bytes:
         raise RuntimeError("Falha ao baixar o arquivo de cotações")
     
     print(f"Download do arquivo de cotações realizado com sucesso: {zip_name}")
 
-    #2) Salvar o .ZIP
     os.makedirs(PATH_TO_SAVE, exist_ok=True)
     zip_path = f'{PATH_TO_SAVE}/pregao_{dt}.zip'
     with open(zip_path, "wb") as f:
         f.write(zip_bytes)
     print(f"Arquivo salvo em: {zip_path}")
 
-    #3) Descompactar o .ZIP
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(f'pregao_{dt}')
 
