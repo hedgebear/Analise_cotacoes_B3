@@ -7,7 +7,7 @@ from azure_storage_client import StorageService
 import io
 
 def build_url_download(date_to_download:datetime):
-    return f"https://www.b3.com.br/pesquisapregao/download?filelist=PR{date_to_download}.zip"
+    return f"https://www.b3.com.br/pesquisapregao/download?filelist=SPR{date_to_download}.zip"
 
 def try_http_download(url:str):
     session = requests.session()
