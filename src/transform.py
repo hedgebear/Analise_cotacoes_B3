@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from lxml import etree
 import io
-from decimal import Decimal
+import json
 
 from utils import convert_to_yymmdd
 
@@ -26,9 +26,11 @@ def get_file(dt: str):
 
 
 def transform():
-    dt = convert_to_yymmdd(datetime.now() - timedelta(days=1))
+    #dt = convert_to_yymmdd(datetime.now() - timedelta(days=1))
 
-    conteudo_bytes = get_file("250930")
+    dt = "250930"
+
+    conteudo_bytes = get_file(dt)
 
     if conteudo_bytes:
         xml_bytes = io.BytesIO(conteudo_bytes)
@@ -55,17 +57,31 @@ def transform():
             ticker = ticker_el.text if ticker_el is not None else None
             
             if ticker:
+                data_negociacao = data_negociacao_el.text if data_negociacao_el is not None and data_negociacao_el.text else None
+
+                preco_abertura = float(preco_abertura_el.text) if preco_abertura_el is not None and preco_abertura_el.text else None
+                preco_fechamento = float(preco_fechamento_el.text) if preco_fechamento_el is not None and preco_fechamento_el.text else None
+                preco_maximo = float(preco_maximo_el.text) if preco_maximo_el is not None and preco_maximo_el.text else None
+                preco_minimo = float(preco_minimo_el.text) if preco_minimo_el is not None and preco_minimo_el.text else None
+                preco_medio = float(preco_medio_el.text) if preco_medio_el is not None and preco_medio_el.text else None
+
+                quantidade_negocios = int(quantidade_movimentada_el.text) if quantidade_movimentada_el is not None and quantidade_movimentada_el.text else None
+
+                volume_financeiro = 0
+
+                if preco_medio and quantidade_negocios:
+                    volume_financeiro = preco_medio * quantidade_negocios
+
+
                 dados_ativo = {
                     'ticker': ticker,
-                    'data_negociacao': data_negociacao_el.text if data_negociacao_el is not None else None,
+                    'data_negociacao': data_negociacao,
                     
-                    'preco_abertura': float(preco_abertura_el.text) if preco_abertura_el is not None and preco_abertura_el.text else None,
-                    'preco_fechamento': float(preco_fechamento_el.text) if preco_fechamento_el is not None and preco_fechamento_el.text else None,
-                    'preco_maximo': float(preco_maximo_el.text) if preco_maximo_el is not None and preco_maximo_el.text else None,
-                    'preco_minimo': float(preco_minimo_el.text) if preco_minimo_el is not None and preco_minimo_el.text else None,
-                    'preco_medio': float(preco_medio_el.text) if preco_medio_el is not None and preco_medio_el.text else None,
-                    
-                    'quantidade_negocios': int(quantidade_movimentada_el.text) if quantidade_movimentada_el is not None and quantidade_movimentada_el.text else None
+                    'preco_abertura': preco_abertura,
+                    'preco_fechamento': preco_fechamento,
+                    'preco_maximo': preco_maximo,
+                    'preco_minimo': preco_minimo,
+                    'volume_financeiro': round(volume_financeiro, 4)
                 }
 
                 dados_extraidos.append(dados_ativo)
@@ -73,6 +89,16 @@ def transform():
             element.clear()
             while element.getprevious() is not None:
                 del element.getparent()[0]
+
+        file_path = f"{PATH_TO_SAVE}/{dt}/pregao_transformed_{dt}.json"
+
+        directory = Path(file_path).parent
+
+        directory.mkdir(parents=True, exist_ok=True)
+
+        with open(file_path, 'w') as file:
+            json.dump(dados_extraidos, file, indent=4)
+
 
     print(f"Processamento concluído. {len(dados_extraidos)} ativos extraídos.")
     if dados_extraidos:
