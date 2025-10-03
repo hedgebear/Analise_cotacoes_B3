@@ -1,10 +1,12 @@
+from src.azure_storage_client import StorageService
 from datetime import datetime, timedelta
 from pathlib import Path
 from lxml import etree
 import io
 import json
 
-from utils import convert_to_yymmdd
+from src.db_client import insert_ativos
+from src.utils import convert_to_yymmdd
 
 RAW_FILE_PATH = Path("./dados_b3/PREGAO_RAW")
 PATH_TO_SAVE = "./dados_b3/PREGAO_TRANSFORMED"
@@ -24,13 +26,21 @@ def get_file(dt: str):
         
     return arquivo_xml.read_bytes()
 
+def get_file_from_azurite(dt: str):
+    storage_service = StorageService()
+    blob_name = f"{dt}/SPRE{dt}.xml"   # ajuste se o nome for diferente
+    xml_content = storage_service.download_blob_file(container_name="pregao-raw", file_name=blob_name)
+    return xml_content.encode("utf-8") if xml_content else None
+
 
 def transform():
     #dt = convert_to_yymmdd(datetime.now() - timedelta(days=1))
 
-    dt = "250930"
+    dt = "251002"
 
-    conteudo_bytes = get_file(dt)
+    conteudo_bytes = get_file_from_azurite(dt)
+
+    dados_extraidos = []
 
     if conteudo_bytes:
         xml_bytes = io.BytesIO(conteudo_bytes)
@@ -38,8 +48,6 @@ def transform():
         attributes_namespace = "{urn:bvmf.217.01.xsd}"
 
         context = etree.iterparse(xml_bytes, tag=f"{attributes_namespace}PricRpt", huge_tree=True)
-
-        dados_extraidos = []
 
         for _, element in context:
             ticker_el = element.find(f"{attributes_namespace}SctyId/{attributes_namespace}TckrSymb")
@@ -90,14 +98,16 @@ def transform():
             while element.getprevious() is not None:
                 del element.getparent()[0]
 
-        file_path = f"{PATH_TO_SAVE}/{dt}/pregao_transformed_{dt}.json"
-
+    # Salva como dt/SPREdt.json para padronizar igual ao XML
+        file_path = f"{PATH_TO_SAVE}/{dt}/SPRE{dt}.json"
         directory = Path(file_path).parent
-
         directory.mkdir(parents=True, exist_ok=True)
-
         with open(file_path, 'w') as file:
             json.dump(dados_extraidos, file, indent=4)
+    
+    if dados_extraidos:
+        insert_ativos(dados_extraidos)
+        print(f"Inseridos {len(dados_extraidos)} registros no PostgreSQL")
 
 
     print(f"Processamento concluído. {len(dados_extraidos)} ativos extraídos.")
