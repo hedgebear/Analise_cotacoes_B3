@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from pathlib import Path
-from utils import convert_to_yymmdd
+from src.utils import convert_to_yymmdd
 import requests
 import os
 import zipfile
-from azure_storage_client import StorageService
+from src.azure_storage_client import StorageService
 import io
+import re
 
 def build_url_download(date_to_download:datetime):
     return f"https://www.b3.com.br/pesquisapregao/download?filelist=SPRE{date_to_download}.zip"
@@ -52,7 +53,7 @@ def extract_files_from_zip(zip_bytes):
 PATH_TO_SAVE = "./dados_b3/PREGAO_RAW"
 
 def run():
-    #storage_service = StorageService()
+    storage_service = StorageService()
 
     dt = convert_to_yymmdd(datetime.now() - timedelta(days=1))
     url_to_download = build_url_download(dt)
@@ -63,25 +64,20 @@ def run():
 
     print(f"Download do arquivo de cotações realizado com sucesso")
 
+
     file_name, file_content = extract_file_from_nested_zip(zip_bytes=zip_bytes)
-
+    # Força o nome do arquivo para o padrão SPREdt.xml
+    file_name = f"SPRE{dt}.xml"
     file_path = f"{PATH_TO_SAVE}/{dt}/{file_name}"
-
     directory = Path(file_path).parent
-
     directory.mkdir(parents=True, exist_ok=True)
-
     with open(file_path, "wb") as f:
         f.write(file_content)
 
-    """
-    extracted_files = extract_files_from_zip(zip_bytes)
-    for file_name, file_content in extracted_files:
-        blob_path = f"dados_b3/{dt}/{file_name}"
-        storage_service.upload_blob_file(container_name="pregao-raw", file_name=blob_path, file_content=file_content)
-
-    print("Arquivos enviados para o Blob Storage com sucesso.")
-    """
+    blob_path = f"{dt}/{file_name}"
+    print(f"blob_path usado para upload: '{blob_path}'")
+    storage_service.upload_blob_file(container_name="pregao-raw", file_name=blob_path, file_content=file_content)
+    print(f"Arquivo {file_name} salvo local e enviado para o Blob Storage.")
 
 
 if __name__ == "__main__":
