@@ -13,15 +13,25 @@ def build_url_download(date_to_download:datetime):
 
 def try_http_download(url:str):
     session = requests.session()
+    print(f"Tentando baixar: {url}")
     try:
         response = session.get(url, timeout=10)
-        response.raise_for_status()  
+        print(f"Status code: {response.status_code}")
+        print(f"Tamanho do conteúdo: {len(response.content)} bytes")
+        if not response.ok:
+            print(f"Resposta não OK: {response.status_code} - {response.reason}")
+        response.raise_for_status()
         if (response.ok) and response.content and len(response.content) > 200:
             if (response.content[:2] == b'PK'):
+                print("Arquivo ZIP válido recebido.")
                 return response.content
+            else:
+                print("Conteúdo recebido não é um arquivo ZIP.")
+        else:
+            print("Conteúdo recebido é muito pequeno ou vazio.")
     except requests.RequestException as e:
         print(f"Falha ao acessar a {url}: {e}")
-        pass
+    return None
 
 def extract_file_from_nested_zip(zip_bytes):
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as external_z:
@@ -58,8 +68,10 @@ def run():
     dt = convert_to_yymmdd(datetime.now() - timedelta(days=1))
     url_to_download = build_url_download(dt)
 
+    print(f"URL de download gerada: {url_to_download}")
     zip_bytes = try_http_download(url_to_download)
     if not zip_bytes:
+        print("Falha ao baixar o arquivo de cotações. Veja os logs acima para detalhes.")
         raise RuntimeError("Falha ao baixar o arquivo de cotações")
 
     print(f"Download do arquivo de cotações realizado com sucesso")

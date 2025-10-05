@@ -3,11 +3,11 @@ from psycopg2.extras import execute_batch
 import os
 
 PG_CONFIG = {
-    "host": os.getenv("PG_HOST", "localhost"),
+    "host": os.getenv("PG_HOST", "postgres"),
     "port": os.getenv("PG_PORT", "5432"),
     "dbname": os.getenv("PG_DB", "b3data"),
     "user": os.getenv("PG_USER", "postgres"),
-    "password": os.getenv("PG_PASS", "lucasfm2002"),
+    "password": os.getenv("PG_PASS", "lucas2002pg"),
 }
 
 def insert_ativos(rows):
