@@ -65,17 +65,24 @@ PATH_TO_SAVE = "./dados_b3/PREGAO_RAW"
 def run():
     storage_service = StorageService()
 
-    dt = convert_to_yymmdd(datetime.now() - timedelta(days=1))
-    url_to_download = build_url_download(dt)
+    max_days = 7
+    zip_bytes = None
+    dt = None
+    for days_ago in range(1, max_days + 1):
+        dt_try = convert_to_yymmdd(datetime.now() - timedelta(days=days_ago))
+        url_to_download = build_url_download(dt_try)
+        print(f"Tentando baixar arquivo para a data: {dt_try} -> {url_to_download}")
+        zip_bytes = try_http_download(url_to_download)
+        if zip_bytes:
+            dt = dt_try
+            print(f"Download do arquivo de cotações realizado com sucesso para a data {dt}")
+            break
+        else:
+            print(f"Arquivo não encontrado para a data {dt_try}. Tentando o dia anterior...")
 
-    print(f"URL de download gerada: {url_to_download}")
-    zip_bytes = try_http_download(url_to_download)
     if not zip_bytes:
-        print("Falha ao baixar o arquivo de cotações. Veja os logs acima para detalhes.")
+        print(f"Falha ao baixar o arquivo de cotações dos últimos {max_days} dias. Veja os logs acima para detalhes.")
         raise RuntimeError("Falha ao baixar o arquivo de cotações")
-
-    print(f"Download do arquivo de cotações realizado com sucesso")
-
 
     file_name, file_content = extract_file_from_nested_zip(zip_bytes=zip_bytes)
     # Força o nome do arquivo para o padrão SPREdt.xml
