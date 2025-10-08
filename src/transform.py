@@ -10,7 +10,7 @@ from src.utils import convert_to_yymmdd
 CONTAINER_NAME = "pregao-raw"
 
 def get_azurite_file(dt: str):
-    storage_service = StorageService(CONTAINER_NAME)
+    storage_service = StorageService()
     blob_path = f"/{dt}/SPRE_{dt}.xml"
     xml_content = storage_service.download_blob_file(container_name=CONTAINER_NAME, file_name=blob_path)
     return xml_content.encode("utf-8") if xml_content else None

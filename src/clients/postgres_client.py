@@ -8,7 +8,7 @@ load_dotenv()
 class PostgresClient():
 
     def __init__(self):
-        print("INFO: Inicializando cliente PostgreSQL.")
+        print("[INFO]: Inicializando cliente PostgreSQL.")
         self.postgres_config = {
             "host": os.getenv("PG_HOST", "localhost"),
             "port": os.getenv("PG_PORT", "5432"),

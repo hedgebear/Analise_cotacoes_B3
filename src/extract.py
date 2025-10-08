@@ -10,7 +10,7 @@ import io
 CONTAINER_NAME = "pregao-raw"
 
 def run(qtd_dias_anteriores_a_baixar: int):
-    storage_service = StorageService(CONTAINER_NAME)
+    storage_service = StorageService()
 
     dt_inicial = datetime.now().date()
 
@@ -37,7 +37,7 @@ def run(qtd_dias_anteriores_a_baixar: int):
 
         try:
             file_content = extract_file_from_nested_zip(zip_bytes=zip_bytes)
-            print(f"SUCCESS: Arquivo extraído com sucesso para a data {dt_request.strftime('%d-%m-%Y')}.")
+            print(f"[OK]: Arquivo extraído com sucesso para a data {dt_request.strftime('%d-%m-%Y')}.")
         except Exception as e:
             print(f"[ERRO]: Falha ao extrair o arquivo ZIP da data {dt_request.strftime('%d-%m-%Y')}: {e}")
             continue

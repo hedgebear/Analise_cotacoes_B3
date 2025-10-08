@@ -21,6 +21,7 @@ def load_ativos(dados):
         INSERT INTO ativos_b3 
         (ticker, data_negociacao, preco_abertura, preco_fechamento, preco_maximo, preco_minimo, volume_financeiro)
         VALUES (%(ticker)s, %(data_negociacao)s, %(preco_abertura)s, %(preco_fechamento)s, %(preco_maximo)s, %(preco_minimo)s, %(volume_financeiro)s)
+        ON CONFLICT (ticker, data_negociacao) DO NOTHING
     """
 
     print(f"[INFO]: Iniciando processo de carga para {len(dados)} registros de ativos.")
@@ -38,7 +39,7 @@ def load_ativos(dados):
             else:
                 print("[INFO]: Nenhum dado novo para inserir. Etapa de inserção pulada.")
 
-        print(f"[OK]: [Load] Carga no banco de dados concluída com sucesso!")
+        print(f"[OK]: Carga no banco de dados concluída com sucesso!")
 
     except (ValueError, psycopg2.Error) as e:
         print(f"[ERRO]: Falha na operação de carga no banco de dados: {e}")

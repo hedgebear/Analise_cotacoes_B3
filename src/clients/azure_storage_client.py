@@ -32,7 +32,7 @@ class StorageService():
         try:
             download_stream = blob_client.download_blob()
             content = download_stream.readall().decode("utf-8")
-            print(f"SUCCESS: Blob '{file_name}' baixado com sucesso do container '{container_name}'.")
+            print(f"[OK]: Blob '{file_name}' baixado com sucesso do container '{container_name}'.")
             return content
         except ResourceNotFoundError:
             print(f"[ATENCAO]: O blob '{file_name}' não foi encontrado no container '{container_name}'.")
