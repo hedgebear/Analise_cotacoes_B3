@@ -17,7 +17,6 @@ def try_http_download(url:str):
     try:
         response = session.get(url, timeout=10)
         print(f"Status code: {response.status_code}")
-        print(f"Tamanho do conteúdo: {len(response.content)} bytes")
         if not response.ok:
             print(f"Resposta não OK: {response.status_code} - {response.reason}")
         response.raise_for_status()
@@ -28,7 +27,7 @@ def try_http_download(url:str):
             else:
                 print("Conteúdo recebido não é um arquivo ZIP.")
         else:
-            print("Conteúdo recebido é muito pequeno ou vazio.")
+            print("Conteúdo recebido é vazio.")
     except requests.RequestException as e:
         print(f"Falha ao acessar a {url}: {e}")
     return None
@@ -43,61 +42,55 @@ def extract_file_from_nested_zip(zip_bytes):
                     for final_file_name in internal_z.namelist():
                         if not final_file_name.endswith('/'):
                             file_content = internal_z.read(final_file_name)
-                            return final_file_name, file_content
+                            return file_content
 
-    return None, None
-
-def extract_files_from_zip(zip_bytes):
-    files = []
-
-    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
-        for file_name in z.namelist():
-            if file_name.endswith('/'):
-                continue
-
-            with z.open(file_name) as f:
-                files.append((file_name, f.read()))
-
-    return files
+    return None
 
 PATH_TO_SAVE = "./dados_b3/PREGAO_RAW"
 
-def run():
+def run(qtd_dias_anteriores_a_baixar: int):
     storage_service = StorageService()
 
-    max_days = 7
-    zip_bytes = None
-    dt = None
-    for days_ago in range(1, max_days + 1):
-        dt_try = convert_to_yymmdd(datetime.now() - timedelta(days=days_ago))
-        url_to_download = build_url_download(dt_try)
-        print(f"Tentando baixar arquivo para a data: {dt_try} -> {url_to_download}")
+    dt_inicial = datetime.now().date()
+    
+    for dias_atras in range(0, qtd_dias_anteriores_a_baixar + 1):
+        dt_request = dt_inicial - timedelta(days=dias_atras)
+        
+        if dt_request.weekday() == 5 or dt_request.weekday() == 6:
+            continue 
+        
+        dt_convertida = convert_to_yymmdd(dt_request)
+        
+        url_to_download = build_url_download(dt_convertida)
+        
+        print(f"Tentando baixar arquivo para a data {dt_request} -> {url_to_download}")
+        
         zip_bytes = try_http_download(url_to_download)
-        if zip_bytes:
-            dt = dt_try
-            print(f"Download do arquivo de cotações realizado com sucesso para a data {dt}")
-            break
-        else:
-            print(f"Arquivo não encontrado para a data {dt_try}. Tentando o dia anterior...")
 
-    if not zip_bytes:
-        print(f"Falha ao baixar o arquivo de cotações dos últimos {max_days} dias. Veja os logs acima para detalhes.")
-        raise RuntimeError("Falha ao baixar o arquivo de cotações")
+        if not zip_bytes:
+            print(f"Arquivo não encontrado para a data {dt_request}. Tentando o dia anterior.")
+            continue
 
-    file_name, file_content = extract_file_from_nested_zip(zip_bytes=zip_bytes)
-    # Força o nome do arquivo para o padrão SPREdt.xml
-    file_name = f"SPRE{dt}.xml"
-    file_path = f"{PATH_TO_SAVE}/{dt}/{file_name}"
-    directory = Path(file_path).parent
-    directory.mkdir(parents=True, exist_ok=True)
-    with open(file_path, "wb") as f:
-        f.write(file_content)
+        file_content = extract_file_from_nested_zip(zip_bytes=zip_bytes)
 
-    blob_path = f"{dt}/{file_name}"
-    print(f"blob_path usado para upload: '{blob_path}'")
-    storage_service.upload_blob_file(container_name="pregao-raw", file_name=blob_path, file_content=file_content)
-    print(f"Arquivo {file_name} salvo local e enviado para o Blob Storage.")
+        file_path = f"{PATH_TO_SAVE}/{dt_convertida}"
+        file_name = f"SPRE_{dt_convertida}.xml"
 
+        salva_arquivo_local(file_content, file_name, file_path)
+
+
+def salva_arquivo_local(conteudo_arquivo: str, nome_arquivo: str, path: str):
+    diretorio = Path(path)
+    diretorio.mkdir(parents=True, exist_ok=True)
+
+    complete_file_path = diretorio / Path(nome_arquivo)
+
+    if not complete_file_path.exists():
+        with open(complete_file_path, "wb") as f:
+            f.write(conteudo_arquivo)
+        print(f"Arquivo {nome_arquivo} salvo com sucesso.")
+
+    print(f"Arquivo {nome_arquivo} já existe.")
 
 if __name__ == "__main__":
-    run()
+    run(7)
