@@ -16,6 +16,7 @@ def get_azurite_file(dt: str):
     return xml_content.encode("utf-8") if xml_content else None
 
 def transform(qtd_dias_anteriores_a_baixar: int):    
+    print(f"[INFO]: Processo de transformação iniciado para os últimos {qtd_dias_anteriores_a_baixar} dias.")
     lista_ativos = []
     
     dt_inicial = datetime.now().date()
@@ -23,43 +24,41 @@ def transform(qtd_dias_anteriores_a_baixar: int):
     for dias_atras in range(0, qtd_dias_anteriores_a_baixar + 1):
         dt_request = dt_inicial - timedelta(days=dias_atras)
         
-        if dt_request.weekday() == 5 or dt_request.weekday() == 6:
+        if dt_request.weekday() >= 5:
             continue
 
         dt_convertida = convert_to_yymmdd(dt_request)
 
-        print(f"Tentando buscar XML para a data: {dt_request}")
-
         conteudo_bytes = get_azurite_file(dt_convertida)
         
         if not conteudo_bytes:
-            print(f"Arquivo XML não encontrado para a data {dt_request}. Tentando o dia anterior.")
+            print(f"[INFO]: Nenhum arquivo encontrado para {dt_request.strftime('%d-%m-%Y')}, pulando para o dia anterior.")
             continue
 
-        xml_bytes = io.BytesIO(conteudo_bytes)
-
-        attributes_namespace = "{urn:bvmf.217.01.xsd}"
-
-        context_gv = etree.iterparse(xml_bytes, tag=f"{attributes_namespace}PricRpt", huge_tree=True)
+        try:
+            print(f"[INFO]: Iniciando extração de dados do XML para a data {dt_request.strftime('%d-%m-%Y')}.")
+            xml_bytes = io.BytesIO(conteudo_bytes)
+            attributes_namespace = "{urn:bvmf.217.01.xsd}"
+            context = etree.iterparse(xml_bytes, tag=f"{attributes_namespace}PricRpt", huge_tree=True)
         
-        lista_ativos_data = extrai_dados_xml(context=context_gv, attributes_namespace=attributes_namespace)
+            lista_ativos_data = extrai_dados_xml(context=context, attributes_namespace=attributes_namespace)
         
-        lista_ativos.extend(lista_ativos_data)
-    
-        print(f"Foram extraídos {len(lista_ativos_data)} registros de ativos da data {dt_request}.")
+            if lista_ativos_data:
+                lista_ativos.extend(lista_ativos_data)
+                print(f"[OK]: Foram extraídos {len(lista_ativos_data)} registros de ativos da data {dt_request.strftime('%d-%m-%Y')}.")
+            else:
+                print(f"[ATENCAO]: Nenhum ativo válido foi extraído do arquivo da data {dt_request.strftime('%d-%m-%Y')}.")
 
+        except Exception as e:
+            print(f"[ERRO]: Falha crítica ao processar o XML da data {dt_request.strftime('%d-%m-%Y')}: {e}")
+            continue
+
+    print(f"[OK]: Processo de transformação finalizado. Total de {len(lista_ativos)} ativos extraídos.")
     return lista_ativos
 
-def salva_json_local(dados: list, nome_arquivo: str, path_arquivo: str):
-    diretorio = Path(path_arquivo)
-    diretorio.mkdir(parents=True, exist_ok=True)
-
-    complete_file_path = diretorio / Path(nome_arquivo)
-
-    if not complete_file_path.exists():
-        with open(complete_file_path, "w") as f:
-            json.dump(dados, f, indent=4)
-        print(f"Arquivo {nome_arquivo} salvo com sucesso.")
+def eh_mercado_a_vista(ticker: str):
+    padrao = re.compile(r'^[A-Z]{4}[0-9]{1,2}F?$')
+    return padrao.match(ticker)
 
 def extrai_dados_xml(context, attributes_namespace):
     dados_extraidos = []
@@ -109,13 +108,16 @@ def extrai_dados_xml(context, attributes_namespace):
 
     return dados_extraidos
 
-def eh_mercado_a_vista(ticker: str):
-    padrao = re.compile(r'^[A-Z]{4}[0-9]{1,2}F?$')
-    
-    if padrao.match(ticker):
-        return True
-    else:
-        return False
+def salva_json_local(dados: list, nome_arquivo: str, path_arquivo: str):
+    diretorio = Path(path_arquivo)
+    diretorio.mkdir(parents=True, exist_ok=True)
+
+    complete_file_path = diretorio / Path(nome_arquivo)
+
+    if not complete_file_path.exists():
+        with open(complete_file_path, "w") as f:
+            json.dump(dados, f, indent=4)
+        print(f"Arquivo {nome_arquivo} salvo com sucesso.")
 
 if __name__ == "__main__":
     transform(7)

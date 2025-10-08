@@ -23,15 +23,23 @@ def load_ativos(dados):
         VALUES (%(ticker)s, %(data_negociacao)s, %(preco_abertura)s, %(preco_fechamento)s, %(preco_maximo)s, %(preco_minimo)s, %(volume_financeiro)s)
     """
 
+    print(f"[INFO]: Iniciando processo de carga para {len(dados)} registros de ativos.")
+
     try:
         postgres_client = PostgresClient()
+
         with postgres_client as cur:
             cur.execute(create_table_sql)
 
-            execute_batch(cur, insert_sql, dados, page_size=200)
+            if dados:
+                print(f"[INFO]: Iniciando inserção de {len(dados)} registros em lote.")
+                execute_batch(cur, insert_sql, dados, page_size=200)
+                print(f"[OK]: Inserção em lote finalizada.")
+            else:
+                print("[INFO]: Nenhum dado novo para inserir. Etapa de inserção pulada.")
 
-        print(f"Carga de {len(dados)} dados de ativos concluída com sucesso!")
+        print(f"[OK]: [Load] Carga no banco de dados concluída com sucesso!")
 
     except (ValueError, psycopg2.Error) as e:
-        print(f"Falha na operação de carga: {e}")
+        print(f"[ERRO]: Falha na operação de carga no banco de dados: {e}")
         raise

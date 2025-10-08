@@ -8,6 +8,7 @@ load_dotenv()
 class PostgresClient():
 
     def __init__(self):
+        print("INFO: Inicializando cliente PostgreSQL.")
         self.postgres_config = {
             "host": os.getenv("PG_HOST", "localhost"),
             "port": os.getenv("PG_PORT", "5432"),
@@ -26,10 +27,10 @@ class PostgresClient():
         try:
             self.conn = psycopg2.connect(**self.postgres_config)
             self.cur = self.conn.cursor()
-
             return self.cur
         except psycopg2.OperationalError as e:
             print(f"Erro ao conectar no banco de dados: {e}")
+            raise e
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
