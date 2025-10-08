@@ -34,43 +34,5 @@ services:
       timeout: 5s
       retries: 10
 
-  b3-pipeline:
-    build: .
-    container_name: b3-pipeline
-    environment:
-      - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
-      - PG_HOST=postgres
-      - PG_PORT=5432
-      - PG_DB=b3data
-      - PG_USER=postgres
-      - PG_PASS=lucas2002pg
-    depends_on:
-      - postgres
-      - azurite
-    volumes:
-      - ./dados_b3:/app/dados_b3
-    command: ["python", "main.py"]
-
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin_b3
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
-    ports:
-      - "5050:80"
-    depends_on:
-      - postgres
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/misc/ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 volumes:
   pgdata:
-  pgadmin_data:
