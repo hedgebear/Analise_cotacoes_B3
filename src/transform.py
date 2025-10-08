@@ -1,39 +1,23 @@
 import re
-from src.azure_storage_client import StorageService
+from src.clients.azure_storage_client import StorageService
 from datetime import datetime, timedelta
 from pathlib import Path
 from lxml import etree
 import io
 import json
-
-from src.db_client import insert_ativos
 from src.utils import convert_to_yymmdd
 
-RAW_FILE_PATH = Path("./dados_b3/PREGAO_RAW")
-PATH_TO_SAVE = "./dados_b3/PREGAO_TRANSFORMED"
-
-def get_local_file(dt: str):
-    diretorio_data = RAW_FILE_PATH / dt
-
-    if not diretorio_data.is_dir():
-        print("Diretório não encontrado")
-        return None
-    
-    arquivo_xml = list(diretorio_data.glob('*.xml'))[0]
-    
-    if not arquivo_xml:
-        print(f"AVISO: Nenhum arquivo .xml encontrado no diretório '{diretorio_data}'")
-        return None
-        
-    return arquivo_xml.read_bytes()
+CONTAINER_NAME = "pregao-raw"
 
 def get_azurite_file(dt: str):
-    storage_service = StorageService()
-    blob_name = f"{dt}/SPRE{dt}.xml"
-    xml_content = storage_service.download_blob_file(container_name="pregao-raw", file_name=blob_name)
+    storage_service = StorageService(CONTAINER_NAME)
+    blob_path = f"/{dt}/SPRE_{dt}.xml"
+    xml_content = storage_service.download_blob_file(container_name=CONTAINER_NAME, file_name=blob_path)
     return xml_content.encode("utf-8") if xml_content else None
 
 def transform(qtd_dias_anteriores_a_baixar: int):    
+    lista_ativos = []
+    
     dt_inicial = datetime.now().date()
 
     for dias_atras in range(0, qtd_dias_anteriores_a_baixar + 1):
@@ -46,7 +30,7 @@ def transform(qtd_dias_anteriores_a_baixar: int):
 
         print(f"Tentando buscar XML para a data: {dt_request}")
 
-        conteudo_bytes = get_local_file(dt_convertida)
+        conteudo_bytes = get_azurite_file(dt_convertida)
         
         if not conteudo_bytes:
             print(f"Arquivo XML não encontrado para a data {dt_request}. Tentando o dia anterior.")
@@ -57,16 +41,16 @@ def transform(qtd_dias_anteriores_a_baixar: int):
         attributes_namespace = "{urn:bvmf.217.01.xsd}"
 
         context_gv = etree.iterparse(xml_bytes, tag=f"{attributes_namespace}PricRpt", huge_tree=True)
-        dados_extraidos_gv = extrai_dados_xml(context=context_gv, attributes_namespace=attributes_namespace)
-
-        nome_arquivo = f"SPRE{dt_convertida}.json"
-        file_path_gv = f"{PATH_TO_SAVE}/{dt_convertida}/gv"
-
-        salva_json(dados=dados_extraidos_gv, nome_arquivo=nome_arquivo, path_arquivo=file_path_gv)
+        
+        lista_ativos_data = extrai_dados_xml(context=context_gv, attributes_namespace=attributes_namespace)
+        
+        lista_ativos.extend(lista_ativos_data)
     
-        print(f"Foram salvos {len(dados_extraidos_gv)} registros de ativos na data {dt_request}.")
+        print(f"Foram extraídos {len(lista_ativos_data)} registros de ativos da data {dt_request}.")
 
-def salva_json(dados: list, nome_arquivo: str, path_arquivo: str):
+    return lista_ativos
+
+def salva_json_local(dados: list, nome_arquivo: str, path_arquivo: str):
     diretorio = Path(path_arquivo)
     diretorio.mkdir(parents=True, exist_ok=True)
 
