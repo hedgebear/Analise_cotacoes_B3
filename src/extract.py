@@ -4,9 +4,8 @@ from src.utils import convert_to_yymmdd
 import requests
 import os
 import zipfile
-from src.azure_storage_client import StorageService
+from src.clients.azure_storage_client import StorageService
 import io
-import re
 
 def build_url_download(date_to_download:datetime):
     return f"https://www.b3.com.br/pesquisapregao/download?filelist=SPRE{date_to_download}.zip"
@@ -48,8 +47,10 @@ def extract_file_from_nested_zip(zip_bytes):
 
 PATH_TO_SAVE = "./dados_b3/PREGAO_RAW"
 
+CONTAINER_NAME = "pregao-raw"
+
 def run(qtd_dias_anteriores_a_baixar: int):
-    storage_service = StorageService()
+    storage_service = StorageService(CONTAINER_NAME)
 
     dt_inicial = datetime.now().date()
     
@@ -73,10 +74,16 @@ def run(qtd_dias_anteriores_a_baixar: int):
 
         file_content = extract_file_from_nested_zip(zip_bytes=zip_bytes)
 
-        file_path = f"{PATH_TO_SAVE}/{dt_convertida}"
+        file_path = f"/{dt_convertida}/"
         file_name = f"SPRE_{dt_convertida}.xml"
 
-        salva_arquivo_local(file_content, file_name, file_path)
+        file_complete_path = file_path + file_name
+
+        storage_service.upload_blob_file(
+            container_name=CONTAINER_NAME, 
+            file_complete_path=file_complete_path,
+            file_content=file_content
+        )
 
 
 def salva_arquivo_local(conteudo_arquivo: str, nome_arquivo: str, path: str):
