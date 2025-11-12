@@ -20,16 +20,16 @@ services:
     image: postgres:15
     container_name: postgres_b3
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: lucas2002pg
-      POSTGRES_DB: b3data
+      # As variáveis agora vêm do arquivo .env
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASS}
+      POSTGRES_DB: ${PG_DB}
     ports:
-      - "5432:5432"
+      - "${PG_PORT}:5432" # Porta também pode ser lida do .env
     volumes:
       - pgdata:/var/lib/postgresql/data
-
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
+      test: ["CMD", "pg_isready", "-U", "${PG_USER}"]
       interval: 5s
       timeout: 5s
       retries: 10

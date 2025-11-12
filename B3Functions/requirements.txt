@@ -1,0 +1,7 @@
+# B3Functions/requirements.txt
+azure-functions
+azure-storage-blob
+python-dotenv
+psycopg2-binary
+requests
+lxml
