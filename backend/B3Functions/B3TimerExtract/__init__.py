@@ -1,8 +1,7 @@
-# B3Functions/B3TimerExtract/__init__.py
 import azure.functions as func
 import logging
 from datetime import datetime, timedelta
-from shared_code import b3_extractor
+from backend.B3Functions.src import b3_extractor
 
 def main(timer: func.TimerRequest) -> None:
     utc_timestamp = datetime.utcnow().replace(

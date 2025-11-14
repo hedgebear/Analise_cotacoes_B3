@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from .utils import convert_to_yymmdd
 import requests
 import zipfile
-from .azure_storage_client import StorageService
+from .client.azure_storage_client import StorageService
 import io
 import logging
 

@@ -1,7 +1,7 @@
 # B3Functions/BlobProcessTransformLoad/__init__.py
 import logging
 import azure.functions as func
-from shared_code import b3_transformer, b3_loader
+from backend.B3Functions.src import b3_transformer, b3_loader
 
 def main(blob: func.InputStream):
     logging.info(f"Função BlobProcessTransformLoad acionada para o blob: {blob.name}")
