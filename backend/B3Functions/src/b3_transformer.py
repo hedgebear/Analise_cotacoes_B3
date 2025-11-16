@@ -40,19 +40,21 @@ def extrai_dados_xml(conteudo_bytes: bytes):
             preco_maximo = float(preco_maximo_el.text) if preco_maximo_el is not None and preco_maximo_el.text else None
             preco_minimo = float(preco_minimo_el.text) if preco_minimo_el is not None and preco_minimo_el.text else None
             preco_medio = float(preco_medio_el.text) if preco_medio_el is not None and preco_medio_el.text else None
-            quantidade_negocios = int(quantidade_movimentada_el.text) if quantidade_movimentada_el is not None and quantidade_movimentada_el.text else None
+            quantidade_movimentada = int(quantidade_movimentada_el.text) if quantidade_movimentada_el is not None and quantidade_movimentada_el.text else None
             volume_financeiro = 0
             
-            if preco_medio and quantidade_negocios:
-                volume_financeiro = preco_medio * quantidade_negocios
+            if preco_medio and quantidade_movimentada:
+                volume_financeiro = preco_medio * quantidade_movimentada
                 
             dados_ativo = {
                 'ticker': ticker,
                 'data_negociacao': data_negociacao,
                 'preco_abertura': preco_abertura,
                 'preco_fechamento': preco_fechamento,
+                'preco_medio': preco_medio,
                 'preco_maximo': preco_maximo,
                 'preco_minimo': preco_minimo,
+                'quantidade_movimentada': quantidade_movimentada,
                 'volume_financeiro': round(volume_financeiro, 4)
             }
                     
