@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from .utils import convert_to_yymmdd
 import requests
 import zipfile
@@ -74,7 +74,7 @@ def run_extraction(dt_request: datetime.date):
         logging.error(f"[EXTRACTOR]: Falha ao extrair o arquivo ZIP da data {dt_request.strftime('%d-%m-%Y')}: {e}")
         return False
 
-    file_path = f"/{dt_convertida}/"
+    file_path = f"{dt_convertida}/"
     file_name = f"SPRE_{dt_convertida}.xml"
     file_complete_path = file_path + file_name
 

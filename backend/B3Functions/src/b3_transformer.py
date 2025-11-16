@@ -4,7 +4,7 @@ import io
 import logging
 
 def eh_mercado_a_vista(ticker: str):
-    padrao = re.compile(r'^[A-Z]{4}[0-9]{1,2}F?$')
+    padrao = re.compile(r'^[A-Z]{4}[0-9]{1,2}?$')
     return padrao.match(ticker)
 
 def extrai_dados_xml(conteudo_bytes: bytes):

@@ -1,15 +1,11 @@
-import pyodbc
-from .client.sql_server_client import SqlServerClient
 import logging
+import os
+import pymssql
 
-
-def load_ativos(dados):
-    """Carrega os dados de ativos no SQL Server.
-
-    Estratégia adotada: cria a tabela caso não exista e usa MERGE por registro
-    (executed via executemany) para garantir idempotência/sem erro em caso de
-    reprocessamento do mesmo dia.
-    """
+def load_ativos_sql(dados: list, blob_name: str = "N/A"):    
+    if not dados:
+        logging.warning("[LOADER]: Nenhum dado recebido para carga.")
+        return
 
     create_table_sql = """
     IF OBJECT_ID('dbo.ativos_b3', 'U') IS NULL
@@ -27,8 +23,7 @@ def load_ativos(dados):
         );
     END
     """
-
-    # Usamos MERGE para inserir somente quando não existir registro com (ticker, data_negociacao)
+    
     merge_sql = """
     MERGE INTO dbo.ativos_b3 AS target
     USING (SELECT ? AS ticker, ? AS data_negociacao, ? AS preco_abertura, ? AS preco_fechamento, ? AS preco_maximo, ? AS preco_minimo, ? AS volume_financeiro) AS source
@@ -38,39 +33,40 @@ def load_ativos(dados):
         VALUES (source.ticker, source.data_negociacao, source.preco_abertura, source.preco_fechamento, source.preco_maximo, source.preco_minimo, source.volume_financeiro);
     """
 
-    if not dados:
-        logging.info("[LOADER]: Nenhum dado novo para inserir.")
-        return
-
-    logging.info(f"[LOADER]: Iniciando processo de carga para {len(dados)} registros.")
-
+    logging.info(f"[LOADER]: Iniciando processo de carga para {len(dados)} registros do blob {blob_name}.")
+    
+    conn = None
     try:
-        sql_server_client = SqlServerClient()
+        conn = pymssql.connect(
+            server=os.environ["SQL_SERVER"],
+            user=os.environ["SQL_USER"],
+            password=os.environ["SQL_PASSWORD"],
+            database=os.environ["SQL_DATABASE"]
+        )
 
-        with sql_server_client as cur:
-            # garante que a tabela exista
+        with conn.cursor() as cur:
             cur.execute(create_table_sql)
-
-            # prepara tuplas para executemany (7 parâmetros por registro)
+            
             dados_em_tuplas = [
                 (
-                    d['ticker'],
-                    d['data_negociacao'],
-                    d['preco_abertura'],
-                    d['preco_fechamento'],
-                    d['preco_maximo'],
-                    d['preco_minimo'],
+                    d['ticker'], d['data_negociacao'], d['preco_abertura'],
+                    d['preco_fechamento'], d['preco_maximo'], d['preco_minimo'],
                     d['volume_financeiro']
                 )
                 for d in dados
             ]
-
-            logging.info(f"[LOADER]: Inserindo/mesclando {len(dados_em_tuplas)} registros (MERGE).")
-            cur.fast_executemany = True
+            
             cur.executemany(merge_sql, dados_em_tuplas)
+        
+        conn.commit()
+        logging.info(f"[LOADER]: Carga de {len(dados)} registros (do {blob_name}) concluída com sucesso!")
 
-        logging.info("[OK]: Carga no banco de dados concluída com sucesso!")
-
-    except (pyodbc.Error, ValueError) as e:
-        logging.error(f"[LOADER]: Falha na operação de carga no banco de dados: {e}")
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logging.error(f"[LOADER]: Falha na carga do blob {blob_name}: {e}")
         raise e
+    
+    finally:
+        if conn:
+            conn.close()
