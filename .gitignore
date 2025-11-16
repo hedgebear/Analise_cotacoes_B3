@@ -1,4 +1,11 @@
 .env
-.venv
-__pycache__
-dados_b3
+
+**/local.settings.json
+
+**/.venv
+
+**/__pycache__/
+.python_packages
+
+.vscode
+dados_b3/

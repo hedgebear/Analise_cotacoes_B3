@@ -1,3 +1,0 @@
-rodar o create table para criar a tabela no sql = docker exec -i postgres_b3 psql -U postgres -d b3data < create_table.sql
-
-rodar tudo automaticamente = docker-compose up --build
