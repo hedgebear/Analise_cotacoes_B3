@@ -1,4 +1,4 @@
-import azure.function as func
+import azure.functions as func
 import logging
 from datetime import datetime, timedelta
 
@@ -30,7 +30,7 @@ def extracao_diaria(timer: func.TimerRequest):
 @app.blob_trigger(
     arg_name="blob",
     path="pregao-raw",
-    connection_string_setting="AzureWebJobsStorage"
+    connection="AzureWebJobsStorage"
 )
 def transformacao_carregamento_sql_server(blob: func.InputStream):
     logging.info(f"PIPELINE (BLOB TRIGGER): Iniciando processo para o blob: {blob.blob_name}")

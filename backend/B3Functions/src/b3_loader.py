@@ -2,7 +2,7 @@ import logging
 import os
 import pymssql
 
-def load_ativos_sql(dados: list, blob_name: str = "N/A"):    
+def load_ativos(dados: list, blob_name: str = "N/A"):    
     if not dados:
         logging.warning("[LOADER]: Nenhum dado recebido para carga.")
         return
