@@ -8,12 +8,12 @@ from src.b3_loader import load_ativos
 
 app = func.FunctionApp()
 
-@app.schedule(schedule="0 0 22 * * 1-5",
+@app.schedule(schedule="0 0 1 * * 2-6",
               arg_name="timer",
               run_on_startup=False)
 
 def extracao_diaria(timer: func.TimerRequest):
-    dt_request = datetime.now().date() 
+    dt_request = datetime.now().date() - timedelta(1)
     
     logging.info(f"TIMER TRIGGER: Iniciando extração para a data: {dt_request.strftime('%Y-%m-%d')}")
     
@@ -33,10 +33,10 @@ def extracao_diaria(timer: func.TimerRequest):
     connection="AzureWebJobsStorage"
 )
 def transformacao_carregamento_sql_server(blob: func.InputStream):
-    logging.info(f"PIPELINE (BLOB TRIGGER): Iniciando processo para o blob: {blob.blob_name}")
+    logging.info(f"PIPELINE (BLOB TRIGGER): Iniciando processo para o blob: {blob.name}")
 
     try:
-        logging.info(f"[EXTRACT]: Lendo bytes do blob {blob.blob_name}...")
+        logging.info(f"[EXTRACT]: Lendo bytes do blob {blob.name}...")
         conteudo_bytes = blob.read()
         logging.info(f"[EXTRACT]: Concluído. {len(conteudo_bytes)} bytes lidos.")
         
@@ -60,10 +60,10 @@ def transformacao_carregamento_sql_server(blob: func.InputStream):
 
     try:
         logging.info(f"[LOAD]: Iniciando carga no SQL Server...")
-        load_ativos(dados, blob_name=blob.blob_name)
+        load_ativos(dados, blob_name=blob.name)
         logging.info(f"[LOAD]: Carga concluída com sucesso.")
         
     except Exception as e:
         logging.error(f"[LOAD]: Falha na etapa de carga: {e}")
 
-    logging.info(f"PIPELINE (BLOB TRIGGER): Processo concluído para o blob: {blob.blob_name}")
+    logging.info(f"PIPELINE (BLOB TRIGGER): Processo concluído para o blob: {blob.name}")

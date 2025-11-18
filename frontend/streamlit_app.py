@@ -59,6 +59,10 @@ if df.empty:
 
 st.sidebar.header("Filtros")
 
+if st.sidebar.button("Atualizar Dados do Banco"):
+    st.cache_data.clear()
+    st.rerun()
+
 lista_ativos = df['ticker'].unique()
 ativo_selecionado = st.sidebar.selectbox(
     "Selecione o Ativo:",

@@ -1,6 +1,6 @@
 import logging
 import os
-import pymssql
+import pyodbc
 
 def load_ativos(dados: list, blob_name: str = "N/A"):    
     if not dados:
@@ -25,11 +25,31 @@ def load_ativos(dados: list, blob_name: str = "N/A"):
         );
     END
     """
+
+    create_temp_table_sql = """
+    CREATE TABLE #ativos_temp (
+        ticker VARCHAR(10) NOT NULL,
+        data_negociacao DATE NOT NULL,
+        preco_abertura NUMERIC(10, 2),
+        preco_fechamento NUMERIC(10, 2),
+        preco_maximo NUMERIC(10, 2),
+        preco_minimo NUMERIC(10, 2),
+        preco_medio NUMERIC(10,2),
+        quantidade_movimentada BIGINT,
+        volume_financeiro NUMERIC(20, 4)
+    );
+    """
+
+    insert_temp_sql = """
+    INSERT INTO #ativos_temp 
+        (ticker, data_negociacao, preco_abertura, preco_fechamento, preco_maximo, preco_minimo, preco_medio, quantidade_movimentada, volume_financeiro)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
     
     merge_sql = """
     MERGE INTO ativos_b3 AS target
-    USING (SELECT %s AS ticker, %s AS data_negociacao, %s AS preco_abertura, %s AS preco_fechamento, %s AS preco_maximo, %s AS preco_minimo, %s AS preco_medio, %s AS quantidade_movimentada, %s AS volume_financeiro) AS source
-    ON (target.ticker = source.ticker AND target.data_negociacao = source.data_negociacao)
+    USING #ativos_temp AS source
+        ON (target.ticker = source.ticker AND target.data_negociacao = source.data_negociacao)
     WHEN NOT MATCHED THEN
         INSERT (ticker, data_negociacao, preco_abertura, preco_fechamento, preco_maximo, preco_minimo, preco_medio, quantidade_movimentada, volume_financeiro)
         VALUES (source.ticker, source.data_negociacao, source.preco_abertura, source.preco_fechamento, source.preco_maximo, source.preco_minimo, source.preco_medio, source.quantidade_movimentada, source.volume_financeiro);
@@ -39,15 +59,20 @@ def load_ativos(dados: list, blob_name: str = "N/A"):
     
     conn = None
     try:
-        conn = pymssql.connect(
-            server=os.environ["SQL_SERVER"],
-            user=os.environ["SQL_USER"],
-            password=os.environ["SQL_PASSWORD"],
-            database=os.environ["SQL_DATABASE"]
-        )
+        driver = "{ODBC Driver 18 for SQL Server}" 
+        server = os.environ["SQL_SERVER"]
+        db = os.environ["SQL_DATABASE"]
+        user = os.environ["SQL_USER"]
+        pwd = os.environ["SQL_PASSWORD"]
+
+        conn_string = f"DRIVER={driver};SERVER=tcp:{server},1433;DATABASE={db};UID={user};PWD={pwd}"
+
+        conn = pyodbc.connect(conn_string)
 
         with conn.cursor() as cur:
             cur.execute(create_table_sql)
+
+            cur.execute(create_temp_table_sql)
             
             dados_em_tuplas = [
                 (
@@ -58,7 +83,11 @@ def load_ativos(dados: list, blob_name: str = "N/A"):
                 for d in dados
             ]
             
-            cur.executemany(merge_sql, dados_em_tuplas)
+            cur.executemany(insert_temp_sql, dados_em_tuplas)
+            logging.info(f"[LOADER]: {len(dados_em_tuplas)} registros inseridos na tabela temporária.")
+
+            cur.execute(merge_sql)
+            logging.info(f"[LOADER]: MERGE concluído.")
         
         conn.commit()
         logging.info(f"[LOADER]: Carga de {len(dados)} registros (do {blob_name}) concluída com sucesso!")

@@ -7,7 +7,7 @@ load_dotenv()
 
 class StorageService():
     def __init__(self):
-        self.connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+        self.connection_string = os.getenv("AzureWebJobsStorage")
         if not self.connection_string:
             raise ValueError("[ERRO]: Connection string para o Azure Storage não definida.")
         
