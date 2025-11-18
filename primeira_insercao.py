@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from backend.B3Functions.src.client.azure_storage_client import StorageService
 from backend.B3Functions.src.b3_transformer import extrai_dados_xml
-from backend.B3Functions.src.b3_loader import load_ativos_sql
+from backend.B3Functions.src.b3_loader import load_ativos as load_ativos_sql
 from backend.B3Functions.src.utils import convert_to_yymmdd
 
 dias_pra_buscar = 60
