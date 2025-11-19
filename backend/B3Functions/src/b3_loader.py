@@ -1,6 +1,6 @@
 import logging
 import os
-import pyodbc
+import pymssql
 
 def load_ativos(dados: list, blob_name: str = "N/A"):    
     if not dados:
@@ -59,15 +59,12 @@ def load_ativos(dados: list, blob_name: str = "N/A"):
     
     conn = None
     try:
-        driver = "{ODBC Driver 18 for SQL Server}" 
-        server = os.environ["SQL_SERVER"]
-        db = os.environ["SQL_DATABASE"]
-        user = os.environ["SQL_USER"]
-        pwd = os.environ["SQL_PASSWORD"]
-
-        conn_string = f"DRIVER={driver};SERVER=tcp:{server},1433;DATABASE={db};UID={user};PWD={pwd}"
-
-        conn = pyodbc.connect(conn_string)
+        conn = pymssql.connect(
+            server=os.environ["SQL_SERVER"],
+            user=os.environ["SQL_USER"],
+            password=os.environ["SQL_PASSWORD"],
+            database=os.environ["SQL_DATABASE"]
+        )
 
         with conn.cursor() as cur:
             cur.execute(create_table_sql)

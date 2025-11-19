@@ -8,10 +8,9 @@ from src.b3_loader import load_ativos
 
 app = func.FunctionApp()
 
-@app.schedule(schedule="0 0 1 * * 2-6",
+@app.schedule(schedule="0 40 1 * * 2-6",
               arg_name="timer",
               run_on_startup=False)
-
 def extracao_diaria(timer: func.TimerRequest):
     dt_request = datetime.now().date() - timedelta(1)
     
